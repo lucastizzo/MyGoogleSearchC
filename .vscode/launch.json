@@ -8,10 +8,10 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "/home/tizzo/projeto-SD/MygoogleSearchC",
-      "program": "/home/tizzo/projeto-SD/MygoogleSearchC/build/Debug/outDebug",
+      "cwd": ".",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
+      "program": "${fileDirname}/${fileBasenameNoExtension}.o",
       "setupCommands": [
         {
           "description": "Enable pretty-printing for gdb",

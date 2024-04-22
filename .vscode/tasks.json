@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-g",
+                "$file",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}.o",
+                "-I",
+                "${workspaceFolder}/include",
+                "${fileDirname}/*.c"  // Aqui compilamos todos os arquivos .c no diretório do arquivo da tarefa
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
