@@ -69,9 +69,4 @@ int verificaErroSocket(int ver, const char *msg){ // Como a maioria dos erros re
     return ver;
 }
 
-void manipulaSolicitao(void *socketCliente, int tamanhoBuffer){ // definido na main para passar parametro
-    int requisicao;
-    char respostaCliente[tamanhoBuffer];
- 
-}
 

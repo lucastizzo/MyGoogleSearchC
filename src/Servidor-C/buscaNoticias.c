@@ -61,5 +61,4 @@ buscaNoticias* busca(int numPesquisa,const char *termoChave, const char *reposit
     printf("O total de ocorrencias encontradas para o termo: %s foi de %d\n", termoChave, numResultados);
 
     return resultados;
-    free(resultados);
 }
