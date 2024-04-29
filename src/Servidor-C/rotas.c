@@ -53,3 +53,12 @@ struct Rota * buscaRota(struct Rota * raiz, char* chave) {
 	}  
 
 }
+
+struct Rota* inicializaRaiz() {
+    struct Rota* raiz = malloc(sizeof(struct Rota));
+    raiz->chave = strdup("/");  // A chave da rota raiz é "/"
+    raiz->valor = strdup("Valor associado à rota raiz");  // Substitua por um valor apropriado
+    raiz->esquerda = NULL;
+    raiz->direita = NULL;
+    return raiz;
+}

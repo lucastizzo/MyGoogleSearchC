@@ -13,8 +13,16 @@
 #include <fcntl.h>
 #include <semaphore.h>
 #include <string.h>
+#include "mongoose.h"
+#include <sys/sendfile.h>
+#include "manipulaRepositorio.h"
 
 #define socketErro -1
+
+struct respostaServidor {char resposta[4096];
+                         char conteudoResposta[4096];
+                         int tamanhoResposta;
+                        };
 
  struct servidorEndereco{ 
     short sin_family; // Família de Endereços 
@@ -37,6 +45,6 @@ typedef struct{
 
 int iniciaServidor(servidorHTTP* servidorHTTP, int porta, int maximoConexoes);
 int verificaErroSocket(int ver, const char *msg);
-void manipulaSolicitacoes(void *socketCliente, int tamanhoBuffer);
+void *manipulaConexao(void *cliente_socket);
 
 #endif

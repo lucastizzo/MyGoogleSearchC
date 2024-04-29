@@ -8,10 +8,16 @@
 #define tamanhoBuffer 4096
 #define maximoConexoes 10000000
  
-char *repositorioNoticias = "mnt/c/home/tizzo/projeto-SD/repositorio-noticias";
+char *nomeServidor = "MyGoogleSearchC";
+char *repositorioNoticias = "/mnt/c/home/tizzo/projeto-SD/repositorio-noticias";
 
 
 int main(){
+    // limpar a tela
+    system("clear");
+
+    printf("\n Inicialializando o servidor %s...\n", nomeServidor);
+    
     // Iniciar servidor HTTP
     servidorHTTP meuServidor;
     int servidorSocket, novoSocket, c, *socketNovo;
@@ -20,9 +26,14 @@ int main(){
     servidorSocket = iniciaServidor(&meuServidor, porta, maximoConexoes);
     // Registro de Rotas
      while(1){
-        printf("Aguardando por conexões...\n");
-        char mensagemCliente[4096] = "";
-        printf("%s\n", mensagemCliente);
+       int client_socket = accept(servidorSocket, NULL, NULL);
+       
+       int* pclient  = malloc(sizeof(int));
+           *pclient = client_socket;
+
+        pthread_t thread_id;
+        pthread_create(&thread_id, NULL, manipulaConexao, pclient);
+        pthread_detach(thread_id);
      }
 
     return 0;

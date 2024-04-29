@@ -18,6 +18,8 @@ struct Rota * adicionaRota(struct Rota * raiz, char* chave, char* valor);
 
 struct Rota * buscaRota(struct Rota * raiz, char * chave);
 
+struct Rota* inicializaRaiz(); // Função que inicializa a raiz da árvore de rotas
+
 void ordena(struct Rota * raiz );
 void listaArquivo();
 

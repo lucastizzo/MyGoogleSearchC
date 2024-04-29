@@ -8,10 +8,9 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": ".",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb",
-      "program": "${fileDirname}/${fileBasenameNoExtension}.o",
+      "cwd": "${workspaceFolder}",
+      "program": "${fileDirname}/output",
+      "preLaunchTask": "compile",
       "setupCommands": [
         {
           "description": "Enable pretty-printing for gdb",
