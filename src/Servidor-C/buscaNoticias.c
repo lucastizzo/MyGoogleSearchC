@@ -19,13 +19,18 @@
 } arquivosIndexados; */
 
 
-
+// Inicializar a rota de Busca
+void inicializaRotasBusca(){
+    struct Rota* raiz = NULL;
+    //Chamada de metodo adiciona Rota
+    adicionaRota(raiz, "/resultadoPesquisa", "resultadoPesquisa");
+};
 
 // Resultado HTML da pesquisa 
 void resultadoPesquisa(struct respostaServidor *resposta, int numPesquisa,const char *termoChave){
     char *html = "<html><head><title> MyGoogleSearch Resultado da pesquisa</title></head><body><h1>Resultado da pesquisa</h1><ul>";
     char *htmlFim = "</ul></body></html>";
-    int i;
+    int i = 0 ;
 
 
     char *htmlResultado = malloc(1000000 * sizeof(char));
@@ -59,7 +64,7 @@ buscaNoticias* busca(int numPesquisa,const char *termoChave){
     buscaNoticias *resultados = malloc(101 * sizeof(buscaNoticias));
     int numResultados = 0;
     int resultadoTotal = 0;
-    numPesquisa = numPesquisa * 101;
+    numPesquisa = numPesquisa * 100;
     
     if (termoChave != NULL){
             if((dir = opendir(repositorioNoticias)) != NULL){
@@ -100,8 +105,7 @@ buscaNoticias* busca(int numPesquisa,const char *termoChave){
     // Caso os resultados sejam maior que um, adiciona o total de resultados encontrados no final da lista criando um novo elemento no vetor, caso contrário apenas grava na posição 0.
     sprintf(resultados[resultadoTotal > 0 ? resultadoTotal +  1 : resultadoTotal].nomeArquivo,"O total de ocorrencias encontradas para o termo: %s foi de %d\n", termoChave, numResultados);
         //Definir rotas
-    struct Rota *raiz = NULL;
-    adicionaRota(raiz, "/resultadoPesquisa", "resultadoPesquisa");
+
     return resultados;
     
 }

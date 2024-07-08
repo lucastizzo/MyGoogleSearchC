@@ -32,7 +32,9 @@ int main(){
            *pclient = client_socket;
 
         pthread_t thread_id;
+        printf("chamando a thread para manipulaConexao\n");
         pthread_create(&thread_id, NULL, manipulaConexao, pclient);
+        printf("Após a chamada da thread para manipulaConexao \n");
         pthread_detach(thread_id);
      }
 

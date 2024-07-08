@@ -16,11 +16,15 @@
 #include "mongoose.h"
 #include <sys/sendfile.h>
 #include "manipulaRepositorio.h"
+#include <time.h>
 
 #define socketErro -1
 
-struct respostaServidor {char resposta[4096];
-                         char conteudoResposta[4096];
+// struct Rota raiz;
+// struct Rota *rotaEncontrada; // Declare the 'rotaEncontrada' variable
+
+struct respostaServidor {char resposta[16000];
+                         char conteudoResposta[16000];
                          int tamanhoResposta;
                         };
 
@@ -46,5 +50,8 @@ typedef struct{
 int iniciaServidor(servidorHTTP* servidorHTTP, int porta, int maximoConexoes);
 int verificaErroSocket(int ver, const char *msg);
 void *manipulaConexao(void *cliente_socket);
+void manipulaRequisicao(char *requisicao, int sock) ;
+
+
 
 #endif

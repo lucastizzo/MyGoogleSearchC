@@ -20,23 +20,25 @@ void ordena(struct Rota* raiz)
 
     if (raiz != NULL) {
         ordena(raiz->esquerda);
-        printf("%s -> %s \n", raiz->chave, raiz->chave);
+        printf("%s -> %s \n", raiz->chave, raiz->valor); // Corrigido para imprimir o valor ao invés da chave duplicada
         ordena(raiz->direita);
     }
 }
 
 struct Rota * adicionaRota(struct Rota * raiz, char* chave, char* valor) {
-	if (raiz == NULL) {
-		return iniciaRota(chave, valor);
-	}
+    if (raiz == NULL) {
+        raiz = iniciaRota(chave, valor);
+        return raiz;
+    }
 
-	if (strcmp(chave, raiz->chave) == 0) {
-		printf("Já existe uma rota para %s", chave);
-	}else if (strcmp(chave, raiz->chave) > 0) {
-		raiz->direita = adicionaRota(raiz->direita, chave, valor);
-	}else {
-		raiz->esquerda = adicionaRota(raiz->esquerda, chave, valor);
-	}
+    if (strcmp(chave, raiz->chave) == 0) {
+        printf("Já existe uma rota para %s\n", chave);
+    } else if (strcmp(chave, raiz->chave) > 0) {
+        raiz->direita = adicionaRota(raiz->direita, chave, valor);
+    } else {
+        raiz->esquerda = adicionaRota(raiz->esquerda, chave, valor);
+    }
+    return raiz;
 }
 
 struct Rota * buscaRota(struct Rota * raiz, char* chave) {
@@ -48,16 +50,16 @@ struct Rota * buscaRota(struct Rota * raiz, char* chave) {
 		return raiz;
 	}else if (strcmp(chave, raiz->chave) > 0) {
 		return buscaRota(raiz->direita, chave);
-	}else if (strcmp(chave, raiz->chave) < 0) {
+	}else{
 		return buscaRota(raiz->esquerda, chave);
-	}  
+	}   
 
 }
 
 struct Rota* inicializaRaiz() {
     struct Rota* raiz = malloc(sizeof(struct Rota));
     raiz->chave = strdup("/");  // A chave da rota raiz é "/"
-    raiz->valor = strdup("Valor associado à rota raiz");  // Substitua por um valor apropriado
+    raiz->valor = strdup("raiz");  
     raiz->esquerda = NULL;
     raiz->direita = NULL;
     return raiz;

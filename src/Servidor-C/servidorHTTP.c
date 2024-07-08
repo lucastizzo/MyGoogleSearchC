@@ -1,6 +1,7 @@
 #include "servidorHTTP.h"
 #include "rotas.h"
-
+#include "manipulaRepositorio.h"
+#include  "buscaNoticias.h"
 
 // Bibliotecas incluidas: 
 //#include <netinet/in.h>
@@ -29,121 +30,171 @@ typedef struct{
 } servidorHTTP;
 */
 struct Rota* inicializaRaiz();
+struct Rota *rotaEncontrada; 
+void inicializaRotasArquivo();
+void inicializaRotasBusca();
+
+void manipulaRequisicao(char *requisicao, int sock) {
+    // Analisar a primeira linha da requisição (método e rota)
+    char metodo[20];
+    char rota[1024];
+    printf("Requisicao, manipula requisicao :  %s\n", requisicao);
+    sscanf(requisicao, "%19s %1023s", metodo, rota);
+    printf("Metodo %s, Rota %s\n", metodo, rota);
+    
+    printf("Antes de chamar a struct resposta servidor\n");
+    // Responder a solicitação do cliente  
+    struct respostaServidor *resposta = malloc(sizeof(struct respostaServidor));
+    
+
+    printf("Após chamar a struct resposta servidor\n");
+    char status[] = "HTTP/1.1 200 OK\r\n";
+    
+    printf("Após chamar char status[]\n");
+
+    // Gerar a data e a hora atuais
+    time_t now = time(0);
+    struct tm *gmt = gmtime(&now);
+    char date[35];
+    
+    strftime(date, sizeof(date), "Date: %a, %d %b %Y %H:%M:%S %Z\r\n", gmt);
+
+   //  printf("Após strftime\n");
+    
+    // printf("Rota Encontrada: Chave = %s, Valor = %s\n", rotaEncontrada->chave, rotaEncontrada->valor);
+    // Buscar a rota na arvore binária definida em rotas.c
+   
+    printf("Antes de chamar da struct inicializa raiz\n");
+    struct Rota *raiz = inicializaRaiz(); 
+    // Função que inicializa a raiz da árvore de rotas
+    
+    printf("Antes de chamar os metodos de rota\n");
+
+    //Inicia todas as rotas
+    inicializaRotasArquivo(); 
+    printf("Inicializou Rotas arquivos\n");
+    inicializaRotasBusca(); 
+    printf("Inicializou Rotas bucas\n");
+
+
+    printf("Depois de inicializar a raiz e inicializar rotas arquivo e rotas busca;\n");
+
+    //Formata a rota 
+    char *rotaDividida = strtok(rota, "=");
+    // Se a rota for encontrada, chamamos a função correspondente.
+    if (strcmp(rota, "/") == 0 || strcmp(rota, "") == 0 || rotaDividida == NULL) {
+        // Se a rota for "/" ou vazia, servir o arquivo index.html
+        printf("Deve carregar o pagina.html\n");
+        FILE *fd = fopen("/home/tizzo/projeto-SD/MygoogleSearchC/src/Servidor-C/pagina.html", "r");
+        if (fd == NULL) {
+            perror("Erro ao abrir o arquivo html");
+            return;
+        }
+        char html_content[4096];
+        size_t bytes_lidos = fread(html_content, 1, sizeof(html_content) - 1, fd);
+        html_content[bytes_lidos] = '\0';
+        fclose(fd);
+        // Enviar cabeçalho HTTP
+        int tamanho = snprintf(resposta->resposta, sizeof(resposta->resposta), "%s%s%s%s", status, date,
+                                                  "Content-Type: text/html; charset=UTF-8\r\n\r\n", html_content);
+        
+        if (tamanho >= sizeof(resposta->resposta)) {
+                // A resposta é muito grande para caber na matriz resposta->resposta
+                perror("Resposta muito grande");
+                return;
+            }
+        
+        resposta->tamanhoResposta = tamanho;
+        
+        write(sock, resposta->resposta, strlen(resposta->resposta)); // Enviar o tamanho real do arquivo
+    } else {
+        printf("Rota não encontrada\n");
+        char not_found_header[] = "HTTP/1.1 404 Not Found\r\n";
+        // write(sock, not_found_header, strlen(not_found_header));
+
+        // Se a rota não for encontrada, retornar 404 Not Found
+        FILE *fe = fopen("/home/tizzo/projeto-SD/MygoogleSearchC/src/Servidor-C/404.html", "r");
+        
+        if (fe == NULL) {
+            perror("Erro ao abrir o arquivo html\n");
+            return;
+        } 
+
+        char html_erro[4096];
+        size_t bytes_erro = fread(html_erro, 1, sizeof(html_erro) - 1, fe);
+        html_erro[bytes_erro] = '\0';
+        fclose(fe);
+        int tamanho_erro = snprintf(resposta->resposta, sizeof(resposta->resposta), "%s%s%s%s", status, date,
+                                                  "Content-Type: text/html; charset=UTF-8\r\n\r\n", html_erro);
+
+        resposta->tamanhoResposta = tamanho_erro;
+
+        write(sock, resposta->resposta, strlen(resposta->resposta)); // Enviar o tamanho real do arquivo
+  
+    }
+    free(resposta);
+}
 
 void *manipulaConexao(void *cliente_socket){
     int sock = *(int*)cliente_socket;
+    free(cliente_socket);
     char requisicao[4096];
-
-        //Ler a solicitação HTTP do Cliente
+    
+    //Ler a solicitação HTTP do Cliente
     ssize_t n = read(sock, requisicao, sizeof(requisicao)-1);
+    printf("Leitura na manipula Conexão :  %s, %ld\n", requisicao, n);
     if (n <= 0) {
         // Erro de leitura ou conexão fechada pelo cliente
         close(sock);
-        free(cliente_socket);
         return NULL;
     }
     requisicao[n] = '\0';  // Adicionar terminador de string
 
+    printf("Requisicao, manipula conexão :  %s, %ld\n", requisicao, n);
     // Analisar a primeira linha da requisição (método e rota)
-    char metodo[20];
-    char rota[1024];
-    sscanf(requisicao, "%s %s", metodo, rota);
+    printf("Chamando a manipulaRequisição \n");
+    manipulaRequisicao(requisicao,  sock);
+    printf("Após a chamada de manipulaRequisição \n");
 
-
-    //Responder a solicitação do cliente  
-    struct respostaServidor resposta;
-    // Enviar a resposta HTTP de volta ao cliente
-    write(sock, resposta.resposta, sizeof(resposta.resposta));
-    
-    //Buscar a rota na arvore binária definida em rotas.c
-    struct Rota *raiz = inicializaRaiz(); // Função que inicializa a raiz da árvore de rotas
-    struct Rota *rotaEncontrada = buscaRota(raiz, requisicao);
-
-    //Buscar a rota na arvore binária definida em rotas.c
-
-    //Se a rota for encontrada, chamamos a função correspondente.
-    if (strcmp(requisicao, "/") == 0 || strcmp(requisicao, "") == 0) {
-        // Se a rota for "/" ou vazia, servir o arquivo index.html,
-        printf("Deve carregar o pagina.html\n");
-        int fd = open("pagina.html", O_RDONLY);
-        struct stat st;
-        fstat(fd, &st);
-        sendfile(sock, fd, NULL, st.st_size);  // Enviar o tamanho real do arquivo
-        close(fd);
-
-    }else if (rota != NULL){
-
-            printf("Deve carregar o pagina.html\n");
-            int fd = open("pagina.html", O_RDONLY);
-
-            
-            if (fd == -1) {
-                perror("Erro ao abrir o arquivo html");
-            }
-
-            struct stat st;
-            fstat(fd, &st);
-
-            // Enviar cabeçalho HTTP
-            char header[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
-            write(sock, header, sizeof(header) - 1);
-
-            sendfile(sock, fd, NULL, st.st_size);  // Enviar o tamanho real do arquivo
-            close(fd);
-
-        } else {
-                printf("Caiu em rota = a nulo\n");
-        }
-
-    //Fechar a conexão com o cliente
+    printf("Fechando o socket\n");
     close(sock);
-    free(cliente_socket);
-
+    printf("Socket fechado\n");
     return NULL;
-
 }
 
-// Função de inicialização de servido HTTP, recebendo como parametro o servidor HTTP, a porta e o numero maximo de conexões
-int iniciaServidor(servidorHTTP * servidorHTTP, int porta, int maximoConexoes) {
-	// Definir a porta do servidor
-    servidorHTTP->porta = porta;
-
-    // Criar um socket para o servidor, pasando como parametro a familia de endereços  e o tipo de socket no caso STREAM de protocolo TCP,
-    // O ultimo parametro 0 é passado para definir o tipo de protocolo a ser usado pelo socket, o 0 nesse caso indica o mais adequado com base nos dois parametros anteriores no caso TCP/IP
-	int servidorSocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    // Verifica se o socket iniciou corretamente
+int iniciaServidor(servidorHTTP *servidor, int porta, int maximoConexoes) {
+    servidor->porta = porta;
+    int opt = 1;
+    
+    int servidorSocket = socket(AF_INET, SOCK_STREAM, 0);
     verificaErroSocket(servidorSocket != -1, "Houve uma falha ao criar o socket");
 
-    // Configurar o endereço do servidor 
-	struct sockaddr_in  servidorEndereco;  
+    struct sockaddr_in servidorEndereco;
     memset(&servidorEndereco, 0, sizeof(servidorEndereco));
-	servidorEndereco.sin_family = AF_INET; // Definir como familia de endereços o IPv4
-	servidorEndereco.sin_port = htons(porta);  //  Definir a porta do servidor (convertida em ordem de bytes da rede)
-	servidorEndereco.sin_addr.s_addr = htonl(INADDR_ANY); // Definir endereço IP do servidor - qualquer disponivel no nosso caso localhost
+    servidorEndereco.sin_family = AF_INET;
+    servidorEndereco.sin_port = htons(porta);
+    servidorEndereco.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    int opt = 1;
-    setsockopt(servidorSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-	// Associa o socket criado ao endereço e porta do servidorm, usamos a função check para dar mensagem de retorno caso falhe
-    verificaErroSocket(bind(servidorSocket, (struct sockaddr  *) &servidorEndereco , sizeof(servidorEndereco )), "Falha na vinculação socket-servidor");
-    
-    // Colocar o socket em modo de escuta para conexões de entrada, com fila de tamanho 1000 (nosso máximo para testes)
-	verificaErroSocket(listen(servidorSocket, maximoConexoes), "Houve uma falha no Listen do servidor");
+    if (setsockopt(servidorSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+        perror("setsockopt");
+        exit(1);
+    }
 
-	servidorHTTP->socket = servidorSocket;
-    // Exibe uma mensagem para cada inicilialização indicando a a porta a qual foi conectada 
-	printf("Servidor HTTP inicializado\nPorta: %d\n", servidorHTTP->porta);
+    verificaErroSocket(bind(servidorSocket, (struct sockaddr *)&servidorEndereco, sizeof(servidorEndereco)), "Falha na vinculação socket-servidor");
+    verificaErroSocket(listen(servidorSocket, maximoConexoes), "Houve uma falha no Listen do servidor");
+
+    servidor->socket = servidorSocket;
+    printf("Servidor HTTP inicializado\nPorta: %d\n", servidor->porta);
+    printf("Servidor socket: %d\n", servidorSocket);
 
     return servidorSocket;
-
 }
 
-int verificaErroSocket(int ver, const char *msg){ // Como a maioria dos erros relacionados as funções de socket são muito parecidos podemos usar uma função de verificação
-    if(ver == socketErro){
+int verificaErroSocket(int ver, const char *msg) {
+    if (ver < 0) {
         perror(msg);
         exit(1);
     }
     return ver;
 }
-
 

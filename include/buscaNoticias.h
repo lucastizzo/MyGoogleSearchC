@@ -22,6 +22,7 @@ typedef struct {
 
 // Protótipo da função para fazer a busca
 buscaNoticias* busca(int numPesquisa,const char *termoChave);
+void inicializaRotasBusca();
 //Função chamada pelo socket para 
 void resultadoPesquisa(struct respostaServidor *resposta, int numPesquisa,const char *termoChave);
 

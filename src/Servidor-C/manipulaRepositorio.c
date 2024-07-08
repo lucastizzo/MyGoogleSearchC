@@ -28,11 +28,11 @@ arquivosIndexados arquivosIndexadosVet[MAX_ARQUIVOS];
 int numArquivosIndexados = 0;
 
 void inicializaRotasArquivo(){
-struct Rota *raiz = NULL;
-adicionaRota(raiz, "/removerArquivo", "removerArquivo");
-adicionaRota(raiz, "/mostrarArquivoIndexado", "mostrarArquivoIndexado");
-adicionaRota(raiz, "/importarArquivo", "importarArquivo");
-adicionaRota(raiz, "/listarArquivos", "listarArquivos");
+        struct Rota* raiz = NULL;
+        adicionaRota(raiz, "/removerArquivo", "removerArquivo");
+        adicionaRota(raiz, "/mostrarArquivoIndexado", "mostrarArquivoIndexado");
+        adicionaRota(raiz, "/importarArquivo", "importarArquivo");
+        adicionaRota(raiz, "/listarArquivos", "listarArquivos");
 }
 //Definir as rotas com base nas funções 
 

@@ -26,7 +26,8 @@
     "rotas.h": "c",
     "compare": "c",
     "type_traits": "c",
-    "mongoose.h": "c"
+    "mongoose.h": "c",
+    "servidorhttp.h": "c"
   },
   "C_Cpp_Runner.cppCompilerPath": "g++",
   "C_Cpp_Runner.debuggerPath": "gdb",
