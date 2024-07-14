@@ -27,7 +27,9 @@
     "compare": "c",
     "type_traits": "c",
     "mongoose.h": "c",
-    "servidorhttp.h": "c"
+    "servidorhttp.h": "c",
+    "string.h": "c",
+    "stdio.h": "c"
   },
   "C_Cpp_Runner.cppCompilerPath": "g++",
   "C_Cpp_Runner.debuggerPath": "gdb",

@@ -14,6 +14,7 @@
 #include "servidorHTTP.h"
 #include "mongoose.h"
 #include "rotas.h"
+#include "paginasPadrao.h"
 
 
 extern char* repositorioNoticias;
@@ -32,26 +33,23 @@ typedef struct {
     char descricaoIndex[MAX_INDEX_TAM];  // Descrição do arquivo
 } arquivosIndexados; // Similar a noticia buscado porém não vamos nos ater a isso
 
-// Como a usaremos como um vetor precisaremos  declarar a estrutura como um vetor por aqui
 
-// Função para indexar um novo arquivo
-void indexarArquivo(const char *nomeArquivo, const char *descricao);
+struct Rota; // Forward declaration of struct Rota
+
+void inicializaRotasArquivo(struct Rota* raiz);
 
 // Função para remover um arquivo
-void removerArquivo(const char *nomeArquivo);
-// Função que retorna todos os arquivos indexados
-arquivosIndexados* mostrarArquivoIndexado();
+void removerArquivoHandler(char *requisicao, int sock, struct respostaServidor *resposta);
+void removerArquivo(char *requisicao, int sock, struct respostaServidor *resposta,  char *nomeArquivo);    
+
 
 void importarArquivo(int sockfd, const char *arquivoImporta, char arquivoDestino[MAX_BUFFER_TAM], const char *descricaoIndex,const char *indexacao);
-
-void listarArquivos();
-
 void mostraArquivoImportado(struct respostaServidor *resposta);
 
-void mostraArquivoRemovido(struct respostaServidor *resposta);
 
-void mostraTodosArquivos(struct respostaServidor *resposta);
+void listarArquivos(char *requisicao, int sock, struct respostaServidor *resposta);
 
-void inicializaRotasArquivo();
+
+
 
 #endif /* MANIPULA_REPOSITORIO_H */

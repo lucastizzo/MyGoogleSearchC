@@ -2,110 +2,156 @@
 #include "servidorHTTP.h"
 #include "rotas.h"
 #include "manipulaRepositorio.h"
+#include "paginasPadrao.h"
 
-// Bibliotecas incluidas :  #include <netinet/in.h>
-//                          #include <stdio.h>
-//                          #include <sys/socket.h>
-//                            #include <arpa/inet.h> 
+void inicializaRotasBusca(struct Rota* raiz) {
+    adicionaRota(raiz, "/resultadoPesquisa", resultadoPesquisahandler);
+}
 
-// Variaveis definidas: #define MAX_LINHA = 1024
-// 
+void resultadoPesquisahandler(char *requisicao, int sock, struct respostaServidor *resposta) {
+    char termoPesquisa[1024]; // Aloca espaço para a string
+    
+    int numPesquisa;
+    printf("antes de ler a requisição no resultaPesquisahandler\n");
+    sscanf(requisicao, "%*s %1023s", termoPesquisa); // Lê a string para o array alocado
+    printf("termo pesquisa: %s\n", termoPesquisa);
 
-// Estruturas definidas
-// Estrutura do resultado de uma pesquisa
-/*typedef struct {
-    char nomeArquivo[100];
-    char descricaoEncontrada[MAX_DESCRICAO_TAM];
-} arquivosIndexados; */
+    char *pesquisa = strchr(termoPesquisa + 2, '/');
+    if (pesquisa == NULL) {
+        montaHTML(sock, resposta, "erroPesquisa");
+        enviaResposta(sock, resposta);
+        return;
+    }
 
+    int tamanho = strlen(pesquisa);
+    
+    if (pesquisa[tamanho - 1] == '?') {
+        pesquisa[tamanho - 1] = '\0';
+    }
 
-// Inicializar a rota de Busca
-void inicializaRotasBusca(){
-    struct Rota* raiz = NULL;
-    //Chamada de metodo adiciona Rota
-    adicionaRota(raiz, "/resultadoPesquisa", "resultadoPesquisa");
-};
+    numPesquisa = atoi(pesquisa + 1);
+    printf("numPesquisa: %d\n", numPesquisa);
+    char *termoPesquisaPtr = strchr(pesquisa + 1, '/');
+    
+    if (termoPesquisaPtr != NULL) {
+        printf("termoPesquisa: %s\n", termoPesquisaPtr); 
+        resultadoPesquisa(requisicao, sock, resposta, numPesquisa, termoPesquisaPtr);
+    } else {
+        montaHTML(sock, resposta, "erroPesquisa");
+        enviaResposta(sock, resposta);
+    }
 
-// Resultado HTML da pesquisa 
-void resultadoPesquisa(struct respostaServidor *resposta, int numPesquisa,const char *termoChave){
-    char *html = "<html><head><title> MyGoogleSearch Resultado da pesquisa</title></head><body><h1>Resultado da pesquisa</h1><ul>";
-    char *htmlFim = "</ul></body></html>";
-    int i = 0 ;
+}
 
+void resultadoPesquisa(char *requisicao, int sock, struct respostaServidor *resposta, int numPesquisa, char *termoChave) {
+    char *htmlFim = "</body></html>";
+    char *htmlResultado = malloc(900000 * sizeof(char));
+    htmlResultado[0] = '\0';
 
-    char *htmlResultado = malloc(1000000 * sizeof(char));
-    strcpy(htmlResultado, html);
+    buscaNoticias *resultados = malloc(101 * sizeof(buscaNoticias)); 
+    for (int i = 0; i < 101; i++) {
+        resultados[i].nomeArquivo[0] = '\0';
+        resultados[i].descricaoEncontrada[0] = '\0';
+    }
+    resultados[0].total = 0;
 
-    buscaNoticias *resultados = busca(numPesquisa, termoChave);// Adicionei esta linha para definir resultados
-
-    while(strlen(resultados[i].nomeArquivo) > 0){
-        char *htmlItem = malloc(1000 * sizeof(char));
+    printf("buscando noticias.\n");
+    busca(numPesquisa, termoChave, resultados);
+    
+    printf("Criando HTML's: \n");
+    strcat(htmlResultado, "<ul>");
+    for (int i = 0; strlen(resultados[i].nomeArquivo) > 0; i++) {
+        char htmlItem[10000];
         sprintf(htmlItem, "<li><a href=\"%s\">%s</a> - %s</li>", resultados[i].nomeArquivo, resultados[i].nomeArquivo, resultados[i].descricaoEncontrada);
         strcat(htmlResultado, htmlItem);
-        free(htmlItem);
+    }
+    strcat(htmlResultado,"</ul>");
+
+    if (resultados[0].total > 0){
+        int numBotoes = (resultados[0].total + 99) / 100;
         
-        i++;
+        strcat(htmlResultado, "<div class='pagination'>");
+        
+        for (int j = 0; j < numBotoes; j++){
+            char botaoHTML[200];
+            sprintf(botaoHTML, "<a href='/buscaNoticia/%d/%s' class='btn'>%d</a> ", j, termoChave, j);
+            strcat(htmlResultado, botaoHTML);
+        }
+        strcat(htmlResultado, "</div>");
     }
 
     strcat(htmlResultado, htmlFim);
-
-    strcpy(resposta->conteudoResposta, htmlResultado);
-    resposta->tamanhoResposta = strlen(htmlResultado);
+    printf("Montando HTML's\n");
+    montaHTML(sock, resposta, "resultadoPesquisa");
+    strcat(resposta->conteudo, htmlResultado);
+    
+    enviaResposta(sock, resposta);
+    
+    printf("Limpando: \n");
+    free(htmlResultado);
     free(resultados);
+    
 }
 
-//Função para fazer a busca 
-buscaNoticias* busca(int numPesquisa,const char *termoChave){
+void busca(int numPesquisa, const char *termoChave, buscaNoticias resultados[]) {
+    printf("Na chamada\n");
     DIR* dir;
     struct dirent *ent;
-    FILE* arquivo;  //Declarações para manipular arquivos/diretorios
+    FILE* arquivo;
 
-    //Aloca a memória para 100 resultados de busca
-    buscaNoticias *resultados = malloc(101 * sizeof(buscaNoticias));
     int numResultados = 0;
     int resultadoTotal = 0;
-    numPesquisa = numPesquisa * 100;
-    
+
     if (termoChave != NULL){
-            if((dir = opendir(repositorioNoticias)) != NULL){
-                
-                while((ent = readdir(dir)) != NULL){
+        printf("Antes de abrir repositorioNoticias, %s\n", repositorioNoticias);
+        if ((dir = opendir(repositorioNoticias)) != NULL){
+            printf("Abriu o repositorioNoticias\n");
+
+            while ((ent = readdir(dir)) != NULL){
+                if (ent->d_type == DT_REG) { // Verifica se é um arquivo regular
                     char caminhoArquivo[300];
-                    sprintf(caminhoArquivo, "%s%s", repositorioNoticias, ent->d_name); //Armazena strings em um buffer no nosso caso caminhoArquivo
+                    sprintf(caminhoArquivo, "%s/%s", repositorioNoticias, ent->d_name);
 
                     arquivo = fopen(caminhoArquivo, "r");
-                    if(arquivo == NULL){
-                        printf("Não foi possível abrir o diretório %s\n", repositorioNoticias);
+                    if (arquivo == NULL){
+                        printf("Não foi possível abrir o arquivo %s\n", caminhoArquivo);
                         continue;
                     }
 
-                    char linha[MAX_LINHA];
+                    char linha[1024];
                     while (fgets(linha, sizeof(linha), arquivo)){
-                        if (strstr(linha, termoChave) != NULL){ //strstr le 
-                            printf("Busca encontrada encontrado em %s: %s\n", caminhoArquivo, linha); // Adiciona o resultado a lista de resultados
+                        
+                        if (strstr(linha, termoChave) != NULL){
                             numResultados++;
-                            if(numResultados < numPesquisa  && numResultados > numPesquisa - 100){
-                                strcpy(resultados[numResultados].nomeArquivo, caminhoArquivo); // Copia o nome do arquivo para a spring de resultado
-                                strcpy(resultados[numResultados].descricaoEncontrada, linha);     // Copia a string resultante em resultados
-                                resultadoTotal++;    
+                            printf("Resultado encontrado:  %s\n", linha);
+                            if (numResultados > numPesquisa && numResultados <= numPesquisa + 100){
+                                strcpy(resultados[numResultados - numPesquisa - 1].nomeArquivo, caminhoArquivo);
+                                strcpy(resultados[numResultados - numPesquisa - 1].descricaoEncontrada, linha);
+                                resultadoTotal++;
+                                printf("resultado total:%d\n", resultadoTotal);
                             }
                         }
                     }
-
                     fclose(arquivo);
                 }
-                closedir(dir);
-            } else {
-                sprintf(resultados[resultadoTotal].nomeArquivo,  "Não foi possível abrir o diretório %s\n", repositorioNoticias);
             }
-    }else {
-        sprintf(resultados->nomeArquivo, "Não é possivel pesquisar por nenhum termo!");
+            closedir(dir);
+        } else {
+            strcpy(resultados[0].nomeArquivo, "Não foi possível abrir o diretório");
+        }
+    } else {
+        strcpy(resultados[0].nomeArquivo, "Não é possível pesquisar por termo nulo!");
     }
 
-    // Caso os resultados sejam maior que um, adiciona o total de resultados encontrados no final da lista criando um novo elemento no vetor, caso contrário apenas grava na posição 0.
-    sprintf(resultados[resultadoTotal > 0 ? resultadoTotal +  1 : resultadoTotal].nomeArquivo,"O total de ocorrencias encontradas para o termo: %s foi de %d\n", termoChave, numResultados);
-        //Definir rotas
-
-    return resultados;
-    
+    if (numResultados == 0) {
+        strcpy(resultados[0].nomeArquivo, "Nenhum resultado encontrado.");
+        strcpy(resultados[0].descricaoEncontrada, "");
+        resultados[0].total = 0;
+    } else {
+        resultados[0].total = numResultados;
+        if (resultadoTotal > 0) {
+            sprintf(resultados[resultadoTotal].nomeArquivo, "Total de ocorrências encontradas: %d", numResultados);
+            strcpy(resultados[resultadoTotal].descricaoEncontrada, "%s", termoChave);
+        }
+    }
 }

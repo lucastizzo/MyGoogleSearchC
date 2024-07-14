@@ -4,23 +4,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "paginasPadrao.h"
 
-struct Rota { // Estrutura para busca binaria
-	char* chave;
-	char* valor;
+struct respostaServidor;
+typedef void (*RotaFunc)(char *, int, struct respostaServidor *);
 
-	struct Rota *esquerda, *direita;
+struct Rota {
+    char* chave; 
+    char* valor; 
+    RotaFunc funcao; 
+    struct Rota *esquerda, *direita; 
 };
 
-struct Rota * iniciaRota(char* chave, char* valor);
+struct Rota* inicializaRaiz();
+struct Rota* adicionaRota(struct Rota *raiz, char *chave, RotaFunc func);
+struct Rota* buscaRota(struct Rota *raiz, char* chave);
+void listaTodasRotas(struct Rota *raiz);
 
-struct Rota * adicionaRota(struct Rota * raiz, char* chave, char* valor);
-
-struct Rota * buscaRota(struct Rota * raiz, char * chave);
-
-struct Rota* inicializaRaiz(); // Função que inicializa a raiz da árvore de rotas
-
-void ordena(struct Rota * raiz );
-void listaArquivo();
 
 #endif

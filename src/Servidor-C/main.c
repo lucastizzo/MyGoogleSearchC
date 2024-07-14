@@ -8,8 +8,9 @@
 #define tamanhoBuffer 4096
 #define maximoConexoes 10000000
  
+// Definindo o nome do servidor e o repositório de notícias
 char *nomeServidor = "MyGoogleSearchC";
-char *repositorioNoticias = "/mnt/c/home/tizzo/projeto-SD/repositorio-noticias";
+char *repositorioNoticias = "/home/tizzo/projeto-SD/repositorio-noticias/";
 
 
 int main(){

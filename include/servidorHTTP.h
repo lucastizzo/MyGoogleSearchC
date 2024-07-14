@@ -17,15 +17,15 @@
 #include <sys/sendfile.h>
 #include "manipulaRepositorio.h"
 #include <time.h>
+#include "paginasPadrao.h"
 
 #define socketErro -1
 
 // struct Rota raiz;
 // struct Rota *rotaEncontrada; // Declare the 'rotaEncontrada' variable
 
-struct respostaServidor {char resposta[16000];
-                         char conteudoResposta[16000];
-                         int tamanhoResposta;
+struct respostaServidor {char header[1042];
+                         char conteudo[16000];
                         };
 
  struct servidorEndereco{ 
@@ -51,7 +51,6 @@ int iniciaServidor(servidorHTTP* servidorHTTP, int porta, int maximoConexoes);
 int verificaErroSocket(int ver, const char *msg);
 void *manipulaConexao(void *cliente_socket);
 void manipulaRequisicao(char *requisicao, int sock) ;
-
 
 
 #endif

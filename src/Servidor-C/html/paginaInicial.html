@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>MyGoogleSearchC</title>
+    <script>
+        function updateAction() {
+            event.preventDefault();
+            var searchValue = document.getElementById('searchInput').value.trim();
+            var form = document.querySelector('form');
+            form.action = '/resultadoPesquisa/1/' + encodeURIComponent(searchValue);
+            form.submit();
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('fileInput').click();
+        }
+    </script>
+</head>
+<body>
+    <h1>Pesquisa MyGoogleSearch SD</h1>
+    <form action="/resultadoPesquisa" method="get" onsubmit="updateAction()">
+        <input type="text" id="searchInput" placeholder="Digite sua pesquisa aqui">
+        <input type="submit" value="Pesquisar">
+        <button type="button" onclick="triggerFileUpload()">Importar arquivo</button>
+        <input type="file" id="fileInput" style="display: none;" onchange="console.log(this.files[0].name);"> <!-- Hidden file input -->
+        <button type="button" onclick="location.href='/listarArquivos'">Listar arquivos</button>
+    </form>
+</body>
+</html>
