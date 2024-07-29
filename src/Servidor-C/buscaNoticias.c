@@ -4,77 +4,120 @@
 #include "manipulaRepositorio.h"
 #include "paginasPadrao.h"
 
-void inicializaRotasBusca(struct Rota* raiz) {
+char *limparCaracteresInvalidos(const char *entrada) { // formatar para unicode devido um erro do arquivo
+    iconv_t cd = iconv_open("UTF-8//IGNORE", "UTF-8");
+    if (cd == (iconv_t)-1)
+    {
+        perror("iconv_open");
+        return NULL;
+    }
+
+    size_t inbytesleft = strlen(entrada);
+    size_t outbytesleft = inbytesleft * 2;
+    char *output = malloc(outbytesleft);
+    char *outbuf = output;
+    if (iconv(cd, (char **)&entrada, &inbytesleft, &outbuf, &outbytesleft) == (size_t)-1)
+    {
+        perror("iconv");
+        free(output);
+        iconv_close(cd);
+        return NULL;
+    }
+
+    *outbuf = '\0';
+    iconv_close(cd);
+    return output;
+}
+
+void inicializaRotasBusca(struct Rota *raiz)
+{
     adicionaRota(raiz, "/resultadoPesquisa", resultadoPesquisahandler);
 }
 
-void resultadoPesquisahandler(char *requisicao, int sock, struct respostaServidor *resposta) {
+void resultadoPesquisahandler(char *requisicao, int sock, struct respostaServidor *resposta)
+{
     char termoPesquisa[1024]; // Aloca espaço para a string
-    
+
     int numPesquisa;
     printf("antes de ler a requisição no resultaPesquisahandler\n");
     sscanf(requisicao, "%*s %1023s", termoPesquisa); // Lê a string para o array alocado
     printf("termo pesquisa: %s\n", termoPesquisa);
 
     char *pesquisa = strchr(termoPesquisa + 2, '/');
-    if (pesquisa == NULL) {
+    if (pesquisa == NULL)
+    {
         montaHTML(sock, resposta, "erroPesquisa");
         enviaResposta(sock, resposta);
         return;
     }
 
     int tamanho = strlen(pesquisa);
-    
-    if (pesquisa[tamanho - 1] == '?') {
+
+    if (pesquisa[tamanho - 1] == '?')
+    {
         pesquisa[tamanho - 1] = '\0';
     }
 
     numPesquisa = atoi(pesquisa + 1);
     printf("numPesquisa: %d\n", numPesquisa);
     char *termoPesquisaPtr = strchr(pesquisa + 1, '/');
-    
-    if (termoPesquisaPtr != NULL) {
-        printf("termoPesquisa: %s\n", termoPesquisaPtr); 
+
+    if (termoPesquisaPtr != NULL)
+    {
+        termoPesquisaPtr++;
+        char termoDecodificado[1024];
+        url_decode(termoPesquisaPtr, termoDecodificado);
+        printf("Termo decodificado: %s\n", termoPesquisaPtr);
         resultadoPesquisa(requisicao, sock, resposta, numPesquisa, termoPesquisaPtr);
-    } else {
+    }
+    else
+    {
         montaHTML(sock, resposta, "erroPesquisa");
         enviaResposta(sock, resposta);
     }
-
 }
 
-void resultadoPesquisa(char *requisicao, int sock, struct respostaServidor *resposta, int numPesquisa, char *termoChave) {
+void resultadoPesquisa(char *requisicao, int sock, struct respostaServidor *resposta, int numPesquisa, char *termoChave)
+{
     char *htmlFim = "</body></html>";
     char *htmlResultado = malloc(900000 * sizeof(char));
     htmlResultado[0] = '\0';
 
-    buscaNoticias *resultados = malloc(101 * sizeof(buscaNoticias)); 
-    for (int i = 0; i < 101; i++) {
+    buscaNoticias *resultados = malloc(101 * sizeof(buscaNoticias));
+    for (int i = 0; i < 101; i++)
+    {
         resultados[i].nomeArquivo[0] = '\0';
         resultados[i].descricaoEncontrada[0] = '\0';
+        resultados[i].url[0] = '\0';
+        resultados[i].titulo[0] = '\0';
     }
     resultados[0].total = 0;
 
     printf("buscando noticias.\n");
     busca(numPesquisa, termoChave, resultados);
-    
+
     printf("Criando HTML's: \n");
     strcat(htmlResultado, "<ul>");
-    for (int i = 0; strlen(resultados[i].nomeArquivo) > 0; i++) {
+    for (int i = 0; strlen(resultados[i].nomeArquivo) > 0; i++)
+    {
+        printf("Iteração %d, montando HTML\n", i);
         char htmlItem[10000];
-        sprintf(htmlItem, "<li><a href=\"%s\">%s</a> - %s</li>", resultados[i].nomeArquivo, resultados[i].nomeArquivo, resultados[i].descricaoEncontrada);
+        sprintf(htmlItem, "<li><a href=\"%s\">%s</a><br>%s<br><small>Arquivo: %s</small></li>", resultados[i].url, resultados[i].titulo, resultados[i].descricaoEncontrada, resultados[i].nomeArquivo);
         strcat(htmlResultado, htmlItem);
     }
-    strcat(htmlResultado,"</ul>");
+    strcat(htmlResultado, "</ul>");
 
-    if (resultados[0].total > 0){
+    if (resultados[0].total > 0)
+    {
         int numBotoes = (resultados[0].total + 99) / 100;
-        
+
         strcat(htmlResultado, "<div class='pagination'>");
-        
-        for (int j = 0; j < numBotoes; j++){
+
+        for (int j = 0; j < numBotoes; j++)
+        {
+            printf("Montando botão iterção %d, Num Botões:%d\n", j, numBotoes);
             char botaoHTML[200];
-            sprintf(botaoHTML, "<a href='/buscaNoticia/%d/%s' class='btn'>%d</a> ", j, termoChave, j);
+            sprintf(botaoHTML, "<a href='/resultadoPesquisa/%d%s' class='btn'>%d</a> ", j, termoChave, j);
             strcat(htmlResultado, botaoHTML);
         }
         strcat(htmlResultado, "</div>");
@@ -84,74 +127,160 @@ void resultadoPesquisa(char *requisicao, int sock, struct respostaServidor *resp
     printf("Montando HTML's\n");
     montaHTML(sock, resposta, "resultadoPesquisa");
     strcat(resposta->conteudo, htmlResultado);
-    
+
     enviaResposta(sock, resposta);
-    
+
     printf("Limpando: \n");
     free(htmlResultado);
     free(resultados);
-    
 }
 
-void busca(int numPesquisa, const char *termoChave, buscaNoticias resultados[]) {
+void busca(int numPesquisa, const char *termoChave, buscaNoticias resultados[])
+{
     printf("Na chamada\n");
-    DIR* dir;
+    DIR *dir;
     struct dirent *ent;
-    FILE* arquivo;
+    FILE *arquivo;
 
     int numResultados = 0;
     int resultadoTotal = 0;
 
-    if (termoChave != NULL){
+    if (termoChave != NULL)
+    {
         printf("Antes de abrir repositorioNoticias, %s\n", repositorioNoticias);
-        if ((dir = opendir(repositorioNoticias)) != NULL){
+        if ((dir = opendir(repositorioNoticias)) != NULL)
+        {
             printf("Abriu o repositorioNoticias\n");
 
-            while ((ent = readdir(dir)) != NULL){
-                if (ent->d_type == DT_REG) { // Verifica se é um arquivo regular
+            while ((ent = readdir(dir)) != NULL)
+            {
+
+                if (ent->d_type == DT_REG)
+                { // Verifica se é um arquivo regular
                     char caminhoArquivo[300];
                     sprintf(caminhoArquivo, "%s/%s", repositorioNoticias, ent->d_name);
 
-                    arquivo = fopen(caminhoArquivo, "r");
-                    if (arquivo == NULL){
-                        printf("Não foi possível abrir o arquivo %s\n", caminhoArquivo);
-                        continue;
-                    }
+                    char *extensao = strrchr(ent->d_name, '.');
 
-                    char linha[1024];
-                    while (fgets(linha, sizeof(linha), arquivo)){
-                        
-                        if (strstr(linha, termoChave) != NULL){
-                            numResultados++;
-                            printf("Resultado encontrado:  %s\n", linha);
-                            if (numResultados > numPesquisa && numResultados <= numPesquisa + 100){
-                                strcpy(resultados[numResultados - numPesquisa - 1].nomeArquivo, caminhoArquivo);
-                                strcpy(resultados[numResultados - numPesquisa - 1].descricaoEncontrada, linha);
-                                resultadoTotal++;
-                                printf("resultado total:%d\n", resultadoTotal);
-                            }
+                    if (extensao != NULL && strcmp(extensao, ".jsonl") == 0)
+                    {
+
+                        arquivo = fopen(caminhoArquivo, "r");
+
+                        if (arquivo == NULL)
+                        {
+                            printf("Não foi possível abrir o arquivo %s\n", caminhoArquivo);
+                            continue;
                         }
+
+                        char *linha = NULL;
+                        size_t buffer_size = 0;
+                        ssize_t linha_length;
+                        struct json_tokener *tok = json_tokener_new();
+                        
+                        while ((linha_length = getline(&linha, &buffer_size, arquivo)) != -1)
+                        {
+
+                            char *linha_corrigida = NULL;
+
+                            enum json_tokener_error jerr;
+                            struct json_object *parsed_json = json_tokener_parse_ex(tok, linha, strlen(linha));
+                            jerr = json_tokener_get_error(tok);
+
+                            if (jerr != json_tokener_success){
+
+                                printf("Fazendo correção de caracter JSON: %s\n", json_tokener_error_desc(jerr));
+                                linha_corrigida = limparCaracteresInvalidos(linha);
+                                if (linha_corrigida != NULL){
+
+                                    parsed_json = json_tokener_parse_ex(tok, linha_corrigida, strlen(linha_corrigida));
+                                    jerr = json_tokener_get_error(tok);
+                                    
+                                    printf("Feita correção de json, validando:\n");
+                                    free(linha_corrigida);
+
+                                    if (jerr != json_tokener_success)
+                                        {
+                                        printf("Erro ao fazer parse do JSON após conversão, verifique! \n%s\n", json_tokener_error_desc(jerr));
+                                        json_tokener_reset(tok); // Reset tokener para a próxima linha
+                                        continue;
+                                    } else {
+                                        printf("Linha JSON convertido com sucesso\n");
+                                    }
+                                }
+                                else{
+                                    printf("Erro ao fazer correção de caracteres inválidos\n");
+                                    json_tokener_reset(tok);
+                                    continue;
+                                }
+                            }
+
+                            // Processar JSON caso OK
+                            struct json_object *titulo, *url, *maintext, *filename;
+
+                            if (!json_object_object_get_ex(parsed_json, "title", &titulo) ||
+                                !json_object_object_get_ex(parsed_json, "url", &url) ||
+                                !json_object_object_get_ex(parsed_json, "maintext", &maintext) ||
+                                !json_object_object_get_ex(parsed_json, "filename", &filename))
+                            {
+
+                                printf("Campos necessários não encontrados no JSON\n");
+
+                                json_object_put(parsed_json);
+                                continue;
+                            }
+
+                            const char *maintext_str = json_object_get_string(maintext);
+                            if (maintext_str != NULL && termoChave != NULL && strstr(maintext_str, termoChave) != NULL)
+                            {
+                                if (numResultados > (((numPesquisa * 100) - 100) -1) && numResultados < ((numPesquisa  * 100) + 1))
+                                {
+                                    strcpy(resultados[numResultados].nomeArquivo, json_object_get_string(filename));
+                                    strcpy(resultados[numResultados].titulo, json_object_get_string(titulo));
+                                    strcpy(resultados[numResultados].url, json_object_get_string(url));
+                                    strncpy(resultados[numResultados].descricaoEncontrada, maintext_str, MAX_DESCRICAO_NOT_TAM);
+                                }
+
+                                numResultados++;
+                                printf("%d\n",numResultados);
+                            }
+
+                            json_object_put(parsed_json);
+                        }
+                        
+                        free(linha);
+                        fclose(arquivo);
+                        json_tokener_free(tok);
                     }
-                    fclose(arquivo);
                 }
             }
             closedir(dir);
-        } else {
+        }
+        else
+        {
             strcpy(resultados[0].nomeArquivo, "Não foi possível abrir o diretório");
         }
-    } else {
+    }
+    else
+    {
         strcpy(resultados[0].nomeArquivo, "Não é possível pesquisar por termo nulo!");
     }
 
-    if (numResultados == 0) {
+    printf("Num Resultados: %d\n", numResultados);
+
+    if (numResultados == 0)
+    {
         strcpy(resultados[0].nomeArquivo, "Nenhum resultado encontrado.");
         strcpy(resultados[0].descricaoEncontrada, "");
         resultados[0].total = 0;
-    } else {
+    }
+    else
+    {
         resultados[0].total = numResultados;
-        if (resultadoTotal > 0) {
+        if (resultadoTotal > 0)
+        {
             sprintf(resultados[resultadoTotal].nomeArquivo, "Total de ocorrências encontradas: %d", numResultados);
-            strcpy(resultados[resultadoTotal].descricaoEncontrada, "%s", termoChave);
+            strcpy(resultados[resultadoTotal].descricaoEncontrada, termoChave);
         }
     }
 }

@@ -7,8 +7,12 @@
 
 void montaHTML(int sock, struct respostaServidor *resposta, const char* nomeArquivo) {
     //Inicializacao de header e conteudo
+    printf("Inicio montaHTML");
+
     memset(resposta->header, 0, sizeof(resposta->header));
+    printf("memset header, montando HTML\n");
     memset(resposta->conteudo, 0, sizeof(resposta->conteudo));
+    printf("memset conteudo, montando HTML\n");
         
     // Cabeçalho HTTP
     time_t now = time(0);
@@ -16,7 +20,7 @@ void montaHTML(int sock, struct respostaServidor *resposta, const char* nomeArqu
     char date[35];
     strftime(date, sizeof(date), "Date: %a, %d %b %Y %H:%M:%S %Z\r\n", gmt);
     snprintf(resposta->header, sizeof(resposta->header), "HTTP/1.1 200 OK\r\n%sContent-Type: text/html; charset=UTF-8\r\n\r\n", date);
-    
+    printf("snprintf header\n");
     // Abrir o arquivo HTML especificado e montar o conteudo 
     char caminhoCompleto[1024];
     snprintf(caminhoCompleto, sizeof(caminhoCompleto), "/home/tizzo/projeto-SD/MygoogleSearchC/src/Servidor-C/html/%s.html", nomeArquivo);
@@ -31,6 +35,7 @@ void montaHTML(int sock, struct respostaServidor *resposta, const char* nomeArqu
     }
     
     size_t bytes_lidos = fread(resposta->conteudo, 1, sizeof(resposta->conteudo) - 1, fd);     
+    printf("fread resposta\n");
     resposta->conteudo[bytes_lidos] = '\0';
     fclose(fd);
 
@@ -52,4 +57,26 @@ void pagina404(char *requisicao, int sock, struct respostaServidor *resposta) {
 void enviaResposta(int sock, struct respostaServidor *resposta){
     write(sock, resposta->header, strlen(resposta->header));
     write(sock, resposta->conteudo, strlen(resposta->conteudo));
+}
+
+void url_decode(char *src, char *dest){
+    char a, b;
+    while (*src) {
+        if ((*src == '%') && ((a = src[1]) && (b = src[2])) && (isxdigit(a) && isxdigit(b))) {
+            if (a >= 'a') a -= 'a' - 'A';
+            if (a >= 'A') a -= ('A' - 10);
+            else a -= '0';
+            if (b >= 'a') b -= 'a' - 'A';
+            if (b >= 'A') b -= ('A' - 10);
+            else b -= '0';
+            *dest++ = 16 * a + b;
+            src += 3;
+        } else if (*src == '+') {
+            *dest++ = ' ';
+            src++;
+        } else {
+            *dest++ = *src++;
+        }
+    }
+    *dest = '\0';
 }

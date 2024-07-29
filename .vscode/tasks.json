@@ -9,7 +9,8 @@
                 "-I${workspaceFolder}/include",
                 "${fileDirname}/*.c",
                 "-o",
-                "${fileDirname}/output/program"
+                "${fileDirname}/output/program",
+                "-ljson-c"
             ],
             "group": "build",
             "problemMatcher": [

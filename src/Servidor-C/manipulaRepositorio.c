@@ -9,18 +9,12 @@ int numArquivosIndexados = 0;
 
 void inicializaRotasArquivo(struct Rota* raiz){
         adicionaRota(raiz, "/removerArquivo", removerArquivoHandler);
-    //    adicionaRota(raiz, "/mostrarArquivoIndexado", mostrarArquivoIndexado);
-    //    adicionaRota(raiz, "/importarArquivo", importarArquivo);
+        adicionaRota(raiz, "/importarArquivo", importarArquivo);
         adicionaRota(raiz, "/listarArquivos", listarArquivos);
 }
 //Definir as rotas com base nas funções 
 
-//Mostrar o HTML das funções 
-void mostraArquivoImportado(struct respostaServidor *resposta){
-    char *html = "<html><head><title>Arquivo Importado</title></head><body><h1>Arquivo Importado com sucesso!</h1></body></html>";
-    strcpy(resposta->conteudo, html);
-   // resposta->tamanhoResposta = strlen(html);
-}
+
 
 // Função para remover algum arquivo 
 void removerArquivo(char *requisicao, int sock, struct respostaServidor *resposta,  char *nomeArquivo){
@@ -59,40 +53,109 @@ void removerArquivoHandler(char *requisicao, int sock, struct respostaServidor *
 }    
 
 
-
-
-void importarArquivo(int sockfd, const char *arquivoImporta, char arquivoDestino[MAX_BUFFER_TAM], const char *descricaoIndex, const char *indexacao){
-// Abre o arquivo para leitura
-    FILE *arquivo = fopen(arquivoImporta, "r");
-    snprintf(arquivoDestino, MAX_BUFFER_TAM, "%s_recebido", arquivoImporta);
-    FILE *arquivoDestinoPtr = fopen(arquivoDestino, "wb");
-
-    if (arquivo == NULL){
-        printf("Erro ao abrir o arquivo %s\n", arquivoImporta);
-        fclose(arquivo);
+void importarArquivo(char *requisicao, int sock, struct respostaServidor *resposta) {
+    // Encontrar o boundary no cabeçalho
+    const char *boundary = strstr(requisicao, "boundary=");
+    if (boundary == NULL) {
+        const char *errorPage = "<html><body>Erro: Boundary não encontrado.</body></html>";
+        write(sock, errorPage, strlen(errorPage));
         return;
     }
 
-    ssize_t bytesRecebidos;
-    char buffer[MAX_BUFFER_TAM];
+    boundary += 9; // Pular "boundary="
+    char boundaryDelimiter[256];
+    snprintf(boundaryDelimiter, sizeof(boundaryDelimiter), "--%s", boundary);
 
-
-    while ((bytesRecebidos = recv(sockfd, buffer, MAX_BUFFER_TAM, 0)) > 0){
-       if (fwrite(buffer, 1, bytesRecebidos, arquivoDestinoPtr) != bytesRecebidos){
-            printf("Erro ao escrever no arquivo %s\n", arquivoDestino);
-            fclose(arquivoDestinoPtr);
-            return;
-       }
+    // Encontrar o início do conteúdo após os cabeçalhos
+    char *contentStart = strstr(requisicao, "\r\n\r\n");
+    if (contentStart == NULL) {
+        printf("Não encontrou o início do conteúdo, contentStart == NULL\n");
+        montaHTML(sock, resposta, "arquivoNaoEncontrado");
+        enviaResposta(sock, resposta);
+        return;
     }
 
-    if (bytesRecebidos == 0){
-        printf("Conexão encerrada pelo cliente\n");
-    } else if (bytesRecebidos == -1){
-        perror("Erro ao receber dados do cliente");
+    contentStart += 4; // Pular "\r\n\r\n"
+
+    // Encontrar o início do cabeçalho do arquivo
+    char *headerStart = strstr(contentStart, "Content-Disposition: form-data;");
+    if (headerStart == NULL) {
+        printf("Não encontrou o cabeçalho do arquivo, headerStart == NULL\n");
+        montaHTML(sock, resposta, "erroAbrirArquivo");
+        enviaResposta(sock, resposta);
+        return;
     }
 
-    fclose(arquivoDestinoPtr);
+    // Extrair o nome do arquivo
+    char nomeArquivo[256] = {0};
+    sscanf(headerStart, "Content-Disposition: form-data; name=\"file\"; filename=\"%255[^\"]\"", nomeArquivo);
 
+    // Encontrar o início dos dados do arquivo
+    char *fileStart = strstr(headerStart, "\r\n\r\n");
+    if (fileStart == NULL) {
+        printf("Não conseguiu encontrar o início dos dados do arquivo, fileStart == NULL\n");
+        montaHTML(sock, resposta, "erroAbrirArquivo");
+        enviaResposta(sock, resposta);
+        return;
+    }
+
+    fileStart += 4; // Pular "\r\n\r\n"
+
+    // Encontrar o fim dos dados do arquivo
+    char *fileEnd = strstr(fileStart, boundary);
+    if (fileEnd == NULL) {
+        // Se não encontrar o boundary, tentar encontrar o final da parte
+        fileEnd = strstr(fileStart, "\r\n--");
+    }
+
+    if (fileEnd == NULL) {
+        printf("Não conseguiu encontrar o fim do arquivo, fileEnd == NULL\n");
+        montaHTML(sock, resposta, "erroAbrirArquivo");
+        enviaResposta(sock, resposta);
+        return;
+    }
+
+    // Ajustar o tamanho do arquivo
+    size_t fileSize = fileEnd - fileStart;
+    if (fileSize == 0) {
+        printf("Tamanho do arquivo é zero.\n");
+        montaHTML(sock, resposta, "erroAbrirArquivo");
+        enviaResposta(sock, resposta);
+        return;
+    }
+
+    // Salvar o arquivo no diretório de uploads
+    char caminhoArquivo[512];
+    snprintf(caminhoArquivo, sizeof(caminhoArquivo), "%s/%s", repositorioNoticias, nomeArquivo);
+
+    FILE *fp = fopen(caminhoArquivo, "wb");
+    if (fp == NULL) {
+        printf("Não conseguiu abrir o arquivo para escrita, fp == NULL\n");
+        montaHTML(sock, resposta, "erroAbrirArquivo");
+        enviaResposta(sock, resposta);
+        return;
+    }
+
+    fwrite(fileStart, 1, fileSize, fp);
+    fclose(fp);
+
+    // Mostrar sucesso
+    mostraArquivoImportado(resposta, sock, nomeArquivo);
+}
+
+
+void mostraArquivoImportado(struct respostaServidor *resposta, int sock,char *nomeArquivo) {
+    
+    montaHTML(sock, resposta, "mostraArquivoImportado");
+    
+    char linha[1024];
+    snprintf(linha, sizeof(linha), "<h1>Arquivo %s importado com sucesso!</h1>\n", nomeArquivo);
+    strcat(resposta->conteudo, linha);
+    strcat(resposta->conteudo, "<button type='button' onclick=\"window.location.href='/'\">Voltar</button>");
+    strcat(resposta->conteudo, "<button type='button' onclick=\"location.href='/listarArquivos'\">Listar arquivos</button>");
+    strcat(resposta->conteudo, "</body></html>");
+    
+    enviaResposta(sock, resposta);
 }
 
 void listarArquivos(char *requisicao, int sock, struct respostaServidor *resposta){

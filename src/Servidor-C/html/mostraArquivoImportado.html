@@ -3,11 +3,32 @@
     <head>
         <meta charset="UTF-8">
         <title>Arquivo Importado</title>
+        <script>
+            function updateAction() {
+                event.preventDefault();
+                var searchValue = document.getElementById('searchInput').value.trim();
+                var form = document.getElementById('searchForm');
+                form.action = '/resultadoPesquisa/1/' + encodeURIComponent(searchValue);
+                form.submit();
+            }
+    
+            function triggerFileUpload() {
+                document.getElementById('fileInput').click();
+            }
+        </script>
     </head>
-    
+
     <body>
-        <h1>Arquivo Importado com sucesso!</h1>
-        <button type="button" onclick="location.href='/listarArquivos'">Listar arquivos</button>
-    </body>
     
-</html>
+        <h1>Pesquisa MyGoogleSearch SD</h1>
+        <form id="searchForm" action="/resultadoPesquisa" method="get" onsubmit="updateAction()">
+            <input type="text" id="searchInput" placeholder="Digite sua pesquisa aqui">
+            <input type="submit" value="Pesquisar">
+        </form>
+    
+        <form id="uploadForm" action="/importarArquivo" method="post" enctype="multipart/form-data">
+            <input type="file" id="fileInput" name="file" style="display: none;" onchange="document.getElementById('uploadForm').submit();">
+            <button type="button" onclick="triggerFileUpload()">Importar arquivo</button>
+        </form>
+
+        <button type="button" onclick="location.href='/listarArquivos'">Listar arquivos</button>

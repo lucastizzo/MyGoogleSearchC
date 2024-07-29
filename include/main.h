@@ -4,5 +4,8 @@
 #include "paginasPadrao.h"
 #include "rotas.h"
 #include <pthread.h>
-#include <main.h>
+#include <locale.h>
+
 struct respostaServidor;
+
+void iniciaThreadConexao(int servidorSocket);

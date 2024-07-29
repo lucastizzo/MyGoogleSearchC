@@ -25,7 +25,7 @@
 // struct Rota *rotaEncontrada; // Declare the 'rotaEncontrada' variable
 
 struct respostaServidor {char header[1042];
-                         char conteudo[16000];
+                         char conteudo[100000];
                         };
 
  struct servidorEndereco{ 

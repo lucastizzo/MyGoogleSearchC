@@ -63,6 +63,11 @@ void *manipulaConexao(void *cliente_socket){
         // Erro de leitura ou conexão fechada pelo cliente
         close(sock);
         return NULL;
+    } else if (n == 0) {
+        // Conexão fechada pelo cliente
+        printf("Conexão fechada pelo cliente\n");
+        close(sock);
+        return NULL;
     }
     requisicao[n] = '\0';  // Adicionar terminador de string
 

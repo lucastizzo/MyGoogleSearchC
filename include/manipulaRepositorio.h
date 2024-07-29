@@ -9,8 +9,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <time.h>
 #include "servidorHTTP.h"
 #include "mongoose.h"
 #include "rotas.h"
@@ -43,13 +46,9 @@ void removerArquivoHandler(char *requisicao, int sock, struct respostaServidor *
 void removerArquivo(char *requisicao, int sock, struct respostaServidor *resposta,  char *nomeArquivo);    
 
 
-void importarArquivo(int sockfd, const char *arquivoImporta, char arquivoDestino[MAX_BUFFER_TAM], const char *descricaoIndex,const char *indexacao);
-void mostraArquivoImportado(struct respostaServidor *resposta);
-
+void importarArquivo(char *requisicao, int sock, struct respostaServidor *resposta);
+void mostraArquivoImportado(struct respostaServidor *resposta, int sock, char *nomeArquivo);
 
 void listarArquivos(char *requisicao, int sock, struct respostaServidor *resposta);
-
-
-
 
 #endif /* MANIPULA_REPOSITORIO_H */
