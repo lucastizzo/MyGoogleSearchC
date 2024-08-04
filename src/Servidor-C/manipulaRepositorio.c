@@ -1,7 +1,7 @@
 #include "manipulaRepositorio.h"
-#include "servidorHTTP.h"
+#include "backend.h"
 #include "rotas.h"
-#include "paginasPadrao.h"
+#include "frontend.h"
 
 
 arquivosIndexados arquivosIndexadosVet[MAX_ARQUIVOS];

@@ -5,11 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
-#include "servidorHTTP.h"
+#include "backend.h"
 #include "manipulaRepositorio.h"
 #include "rotas.h"
 #include "mongoose.h"
-#include "paginasPadrao.h"
+#include "frontend.h"
 #include <json-c/json.h>
 #include <iconv.h>
 

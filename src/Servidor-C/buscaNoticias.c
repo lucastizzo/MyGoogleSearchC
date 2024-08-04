@@ -1,8 +1,8 @@
 #include "buscaNoticias.h"
-#include "servidorHTTP.h"
+#include "backend.h"
 #include "rotas.h"
 #include "manipulaRepositorio.h"
-#include "paginasPadrao.h"
+#include "frontend.h"
 
 char *limparCaracteresInvalidos(const char *entrada) { // formatar para unicode devido um erro do arquivo
     iconv_t cd = iconv_open("UTF-8//IGNORE", "UTF-8");
@@ -98,9 +98,19 @@ void resultadoPesquisa(char *requisicao, int sock, struct respostaServidor *resp
 
     printf("Criando HTML's: \n");
     strcat(htmlResultado, "<ul>");
+    
+    char ResultadoPesquisa[200];
+    
+    if (resultados[0].total > numPesquisa * 100) {
+        sprintf(ResultadoPesquisa, "<p>Mostrando resultados de %d a %d de um total de %d</p>", ((numPesquisa * 100) - 100), (numPesquisa * 100), resultados[0].total);
+    }else{ 
+        sprintf(ResultadoPesquisa, "<p>Mostrando resultados de %d a %d de um total de %d</p>", ((numPesquisa * 100) - 100), resultados[0].total, resultados[0].total);
+    }
+    strcat(htmlResultado, ResultadoPesquisa);
+    
     for (int i = 0; strlen(resultados[i].nomeArquivo) > 0; i++)
     {
-        printf("Iteração %d, montando HTML\n", i);
+        // printf("Iteração %d, montando HTML\n", i);
         char htmlItem[10000];
         sprintf(htmlItem, "<li><a href=\"%s\">%s</a><br>%s<br><small>Arquivo: %s</small></li>", resultados[i].url, resultados[i].titulo, resultados[i].descricaoEncontrada, resultados[i].nomeArquivo);
         strcat(htmlResultado, htmlItem);
@@ -110,16 +120,33 @@ void resultadoPesquisa(char *requisicao, int sock, struct respostaServidor *resp
     if (resultados[0].total > 0)
     {
         int numBotoes = (resultados[0].total + 99) / 100;
+        int j;
 
         strcat(htmlResultado, "<div class='pagination'>");
 
-        for (int j = 0; j < numBotoes; j++)
-        {
-            printf("Montando botão iterção %d, Num Botões:%d\n", j, numBotoes);
+        if (numBotoes > 5) {
+
+            j = numBotoes - 5;
+
+        } else {
+            j = 1;
+        }
+
+        while (j < (numPesquisa + 6) && j < (numBotoes + 1)){
+                
+                char botaoHTML[200];
+                sprintf(botaoHTML, "<a href='/resultadoPesquisa/%d/%s' class='btn'>%d</a> ", j, termoChave, j);
+                strcat(htmlResultado, botaoHTML);
+                j++;
+        }
+        
+        if (j < numBotoes) {
             char botaoHTML[200];
-            sprintf(botaoHTML, "<a href='/resultadoPesquisa/%d%s' class='btn'>%d</a> ", j, termoChave, j);
+            sprintf(botaoHTML, "<a href='/resultadoPesquisa/%d/%s' class='btn'>Próximo</a> ", numBotoes, termoChave, numBotoes);
             strcat(htmlResultado, botaoHTML);
         }
+
+
         strcat(htmlResultado, "</div>");
     }
 
@@ -130,9 +157,19 @@ void resultadoPesquisa(char *requisicao, int sock, struct respostaServidor *resp
 
     enviaResposta(sock, resposta);
 
-    printf("Limpando: \n");
-    free(htmlResultado);
-    free(resultados);
+    printf("Limpando, noticias, termo chave: %s, numPesquisa: %d\n", termoChave, numPesquisa);
+    
+    if (htmlResultado != NULL) {
+        printf("Limpando HTML resultado: \n");
+        free(htmlResultado);
+    }
+
+// Verifique se 'resultados' não é nulo antes de liberar a memória
+    if (resultados != NULL) {
+        printf("Limpando resultado: \n");
+        free(resultados);
+    }
+
 }
 
 void busca(int numPesquisa, const char *termoChave, buscaNoticias resultados[])
@@ -144,6 +181,7 @@ void busca(int numPesquisa, const char *termoChave, buscaNoticias resultados[])
 
     int numResultados = 0;
     int resultadoTotal = 0;
+    int vetorPesquisa = 0;
 
     if (termoChave != NULL)
     {
@@ -233,16 +271,20 @@ void busca(int numPesquisa, const char *termoChave, buscaNoticias resultados[])
                             const char *maintext_str = json_object_get_string(maintext);
                             if (maintext_str != NULL && termoChave != NULL && strstr(maintext_str, termoChave) != NULL)
                             {
-                                if (numResultados > (((numPesquisa * 100) - 100) -1) && numResultados < ((numPesquisa  * 100) + 1))
+                                 numResultados++;
+                                //printf("Num Pesquisa: %d\n", ((numPesquisa * 100) - 101));
+                                if (numResultados > ((numPesquisa * 100) - 101) && numResultados < ((numPesquisa  * 100) + 1))
                                 {
-                                    strcpy(resultados[numResultados].nomeArquivo, json_object_get_string(filename));
-                                    strcpy(resultados[numResultados].titulo, json_object_get_string(titulo));
-                                    strcpy(resultados[numResultados].url, json_object_get_string(url));
-                                    strncpy(resultados[numResultados].descricaoEncontrada, maintext_str, MAX_DESCRICAO_NOT_TAM);
+                                    strcpy(resultados[vetorPesquisa].nomeArquivo, json_object_get_string(filename));
+                                    strcpy(resultados[vetorPesquisa].titulo, json_object_get_string(titulo));
+                                    strcpy(resultados[vetorPesquisa].url, json_object_get_string(url));
+                                    strncpy(resultados[vetorPesquisa].descricaoEncontrada, maintext_str, MAX_DESCRICAO_NOT_TAM);
+                                    vetorPesquisa++;
+                                    
+                                  //  printf("vetorPesquisa: %d, numResulados: %d\n" , vetorPesquisa, numResultados);
+                                   
+                                    
                                 }
-
-                                numResultados++;
-                                printf("%d\n",numResultados);
                             }
 
                             json_object_put(parsed_json);

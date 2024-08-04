@@ -1,6 +1,6 @@
-#include "paginasPadrao.h"
+#include "frontend.h"
 #include "buscaNoticias.h"
-#include "servidorHTTP.h"
+#include "backend.h"
 #include "rotas.h"
 #include "manipulaRepositorio.h"
 
@@ -42,22 +42,39 @@ void montaHTML(int sock, struct respostaServidor *resposta, const char* nomeArqu
 }
 
 
-void paginaInicial(char *requisicao, int sock, struct respostaServidor *resposta) {
+void paginaInicial(int sock, struct respostaServidor *resposta) {
     
     montaHTML(sock, resposta, "paginaInicial");
     enviaResposta(sock, resposta);
 }
 
-void pagina404(char *requisicao, int sock, struct respostaServidor *resposta) {
+void pagina404(int sock, struct respostaServidor *resposta) {
      
      montaHTML(sock, resposta, "404");
      enviaResposta(sock, resposta);
 }
 
 void enviaResposta(int sock, struct respostaServidor *resposta){
-    write(sock, resposta->header, strlen(resposta->header));
-    write(sock, resposta->conteudo, strlen(resposta->conteudo));
+    
+    printf("Enviando resposta: \n");
+
+    ssize_t bytes_written = write(sock, resposta->header, strlen(resposta->header));
+    if (bytes_written == -1) {
+        perror("Erro ao enviar header");
+        return;
+    }
+
+    printf("Enviando resposta, header: \n");
+
+    bytes_written = write(sock, resposta->conteudo, strlen(resposta->conteudo));
+    if (bytes_written == -1) {
+        perror("Erro ao enviar conteúdo");
+        return;
+    }
+
+    printf("Enviando resposta, conteudo: \n");
 }
+
 
 void url_decode(char *src, char *dest){
     char a, b;

@@ -1,5 +1,5 @@
 #include "rotas.h"
-#include "paginasPadrao.h"
+#include "frontend.h"
 
 struct Rota* inicializaRaiz() {
     struct Rota *raiz = (struct Rota*)malloc(sizeof(struct Rota));

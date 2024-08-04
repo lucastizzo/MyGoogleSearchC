@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "paginasPadrao.h"
+#include "frontend.h"
 
 struct respostaServidor;
 typedef void (*RotaFunc)(char *, int, struct respostaServidor *);

@@ -1,7 +1,7 @@
-#include "servidorHTTP.h"
+#include "backend.h"
 #include "buscaNoticias.h"
 #include "manipulaRepositorio.h"
-#include "paginasPadrao.h"
+#include "frontend.h"
 #include "rotas.h"
 #include <pthread.h>
 #include <locale.h>

@@ -1,14 +1,10 @@
-#include "servidorHTTP.h"
+#include "backend.h"
 #include "rotas.h"
 #include "manipulaRepositorio.h"
 #include "buscaNoticias.h"
-#include "paginasPadrao.h"
+#include "frontend.h"
 
-// struct Rota* inicializaRaiz();
-// struct Rota *rotaEncontrada; 
-// void inicializaRotasPadrao();
-// void inicializaRotasArquivo();
-// void inicializaRotasBusca();
+
 
 void manipulaRequisicao(char *requisicao, int sock) {
     char metodo[20];
@@ -18,12 +14,16 @@ void manipulaRequisicao(char *requisicao, int sock) {
     printf("rotaStr: %s\n", rotaStr);
 
     struct respostaServidor *resposta = malloc(sizeof(struct respostaServidor));
+    
+    if (resposta == NULL) {
+        perror("Falha ao alocar memória para resposta");
+        close(sock);
+        return;
+    }
+
     struct Rota *raiz = inicializaRaiz(); 
     
     printf("Inicializando rotas:\n");
-    
-    inicializaRaiz();
-    printf("Inicializou a raiz ,%s\n", raiz->chave);
     
     inicializaRotasArquivo(raiz);
     printf("Após inicializar rotas arquivo: \n");
@@ -48,13 +48,17 @@ void manipulaRequisicao(char *requisicao, int sock) {
         pagina404(requisicao, sock, resposta);
     }
 
-    free(resposta);
+    if (resposta != NULL) {
+        printf("Limpando resposta?\n");
+        free(resposta);
+        resposta = NULL;
+    }
 }
 
 void *manipulaConexao(void *cliente_socket){
     int sock = *(int*)cliente_socket;
     free(cliente_socket);
-    char requisicao[4096];
+    char requisicao[4096] = {0}; //Incializar com zero para evitar lixo de memória
     
     //Ler a solicitação HTTP do Cliente
     ssize_t n = read(sock, requisicao, sizeof(requisicao)-1);
@@ -80,36 +84,52 @@ void *manipulaConexao(void *cliente_socket){
     printf("Após a chamada de manipulaRequisição \n");
 
     printf("Fechando o socket\n");
+    
     close(sock);
     printf("Socket fechado\n");
     return NULL;
 }
 
-int iniciaServidor(servidorHTTP *servidor, int porta, int maximoConexoes) {
-    servidor->porta = porta;
-    int opt = 1;
-    
-    int servidorSocket = socket(AF_INET, SOCK_STREAM, 0);
-    verificaErroSocket(servidorSocket != -1, "Houve uma falha ao criar o socket");
 
+int criaSocketServidor(int porta, int maximoConexoes){
+    int servidorSocket;
     struct sockaddr_in servidorEndereco;
-    memset(&servidorEndereco, 0, sizeof(servidorEndereco));
-    servidorEndereco.sin_family = AF_INET;
-    servidorEndereco.sin_port = htons(porta);
-    servidorEndereco.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if (setsockopt(servidorSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
-        perror("setsockopt");
-        exit(1);
+    // Cria o socket do servidor
+    if ((servidorSocket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("Falha ao criar o socket");
+        exit(EXIT_FAILURE);
+    }
+   
+    int opt = 1;
+    if (setsockopt(servidorSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+        perror("Falha ao configurar o socket para reutilizar o endereço");
+        close(servidorSocket);
+        exit(EXIT_FAILURE);
     }
 
-    verificaErroSocket(bind(servidorSocket, (struct sockaddr *)&servidorEndereco, sizeof(servidorEndereco)), "Falha na vinculação socket-servidor");
-    verificaErroSocket(listen(servidorSocket, maximoConexoes), "Houve uma falha no Listen do servidor");
+    // Configura o socket do servidor como não bloqueante
+    int flags = fcntl(servidorSocket, F_GETFL, 0);
+    fcntl(servidorSocket, F_SETFL, flags | O_NONBLOCK);
 
-    servidor->socket = servidorSocket;
-    printf("Servidor HTTP inicializado\nPorta: %d\n", servidor->porta);
-    printf("Servidor socket: %d\n", servidorSocket);
+    // Define o endereço do servidor
+    servidorEndereco.sin_family = AF_INET;
+    servidorEndereco.sin_addr.s_addr = INADDR_ANY;
+    servidorEndereco.sin_port = htons(porta);
 
+    // Associa o socket ao endereço e porta
+    if (bind(servidorSocket, (struct sockaddr *)&servidorEndereco, sizeof(servidorEndereco)) < 0) {
+        perror("Falha ao associar o socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // Coloca o socket em modo de escuta
+    if (listen(servidorSocket, maximoConexoes) < 0) {
+        perror("Falha ao colocar o socket em modo de escuta");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Servidor em execução na porta %d\n", porta);
     return servidorSocket;
 }
 
@@ -119,5 +139,10 @@ int verificaErroSocket(int ver, const char *msg) {
         exit(1);
     }
     return ver;
+}
+
+void sigpipe_handler(int signum) {
+    // Estava tendo muito erro de SIGPIPE quando a pagina demorava carregar.
+    printf("Capturado SIGPIPE: cliente fechou a conexão.\n");
 }
 

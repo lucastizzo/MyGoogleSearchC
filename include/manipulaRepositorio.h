@@ -14,10 +14,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <time.h>
-#include "servidorHTTP.h"
+#include "backend.h"
 #include "mongoose.h"
 #include "rotas.h"
-#include "paginasPadrao.h"
+#include "frontend.h"
 
 
 extern char* repositorioNoticias;
