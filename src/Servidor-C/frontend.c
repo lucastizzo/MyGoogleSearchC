@@ -42,16 +42,17 @@ void montaHTML(int sock, struct respostaServidor *resposta, const char* nomeArqu
 }
 
 
-void paginaInicial(int sock, struct respostaServidor *resposta) {
+void paginaInicial(char *requisicao,int sock, struct respostaServidor *resposta) {
     
     montaHTML(sock, resposta, "paginaInicial");
     enviaResposta(sock, resposta);
 }
 
 void pagina404(int sock, struct respostaServidor *resposta) {
-     
+     printf("chamada de pagina404\n");
      montaHTML(sock, resposta, "404");
      enviaResposta(sock, resposta);
+     printf("resposta enviada\n");
 }
 
 void enviaResposta(int sock, struct respostaServidor *resposta){

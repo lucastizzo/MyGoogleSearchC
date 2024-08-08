@@ -4,7 +4,9 @@
 #include "buscaNoticias.h"
 #include "frontend.h"
 
+#define TAMANHO_BUFFER 100000
 
+//pagina404(char *requisicao, int sock, struct respostaServidor *resposta);
 
 void manipulaRequisicao(char *requisicao, int sock) {
     char metodo[20];
@@ -14,7 +16,6 @@ void manipulaRequisicao(char *requisicao, int sock) {
     printf("rotaStr: %s\n", rotaStr);
 
     struct respostaServidor *resposta = malloc(sizeof(struct respostaServidor));
-    
     if (resposta == NULL) {
         perror("Falha ao alocar memória para resposta");
         close(sock);
@@ -22,12 +23,10 @@ void manipulaRequisicao(char *requisicao, int sock) {
     }
 
     struct Rota *raiz = inicializaRaiz(); 
-    
+
     printf("Inicializando rotas:\n");
-    
     inicializaRotasArquivo(raiz);
     printf("Após inicializar rotas arquivo: \n");
-    
     inicializaRotasBusca(raiz);
     printf("Após inicializar rotas busca: \n");
 
@@ -38,100 +37,83 @@ void manipulaRequisicao(char *requisicao, int sock) {
 
     if (rotaEncontrada != NULL) {
         printf("Rota encontrada %s\n", rotaEncontrada->chave);
-        
         rotaEncontrada->funcao(requisicao, sock, resposta);
-
         printf("Após chamar a função atrelada a rota: \n");
     } else {
-        
         printf("Não encontrou a rota: %s\n", rotaStr);
-        pagina404(requisicao, sock, resposta);
+        montaHTML(sock, resposta, "404");
+        enviaResposta(sock, resposta);
+        printf("Após a função pagina 404\n");
     }
 
     if (resposta != NULL) {
-        printf("Limpando resposta?\n");
+        printf("Limpando resposta...\n");
         free(resposta);
         resposta = NULL;
     }
 }
 
-void *manipulaConexao(void *cliente_socket){
+
+void *manipulaConexao(void *cliente_socket) {
     int sock = *(int*)cliente_socket;
     free(cliente_socket);
-    char requisicao[4096] = {0}; //Incializar com zero para evitar lixo de memória
-    
-    //Ler a solicitação HTTP do Cliente
-    ssize_t n = read(sock, requisicao, sizeof(requisicao)-1);
-    printf("Leitura na manipula Conexão :  %s, %ld\n", requisicao, n);
+    char requisicao[TAMANHO_BUFFER] = {0};
+
+    printf("Lendo dados do load balancer...\n");
+    ssize_t n = read(sock, requisicao, sizeof(requisicao) - 1);
     if (n <= 0) {
-        // Erro de leitura ou conexão fechada pelo cliente
-        close(sock);
-        return NULL;
-    } else if (n == 0) {
-        // Conexão fechada pelo cliente
-        printf("Conexão fechada pelo cliente\n");
+        perror("Erro ao ler dados do load balancer");
         close(sock);
         return NULL;
     }
-    requisicao[n] = '\0';  // Adicionar terminador de string
+    requisicao[n] = '\0';
 
-    printf("Requisicao, manipula conexão :  %s, %ld\n", requisicao, n);
+    //printf("Requisição recebida (%zd bytes): %s\n", n, requisicao);
 
-    printf("Chamando a manipulaRequisição \n");
-   
-    manipulaRequisicao(requisicao,  sock);
-    
-    printf("Após a chamada de manipulaRequisição \n");
+    manipulaRequisicao(requisicao, sock);
 
     printf("Fechando o socket\n");
-    
     close(sock);
-    printf("Socket fechado\n");
     return NULL;
 }
 
 
-int criaSocketServidor(int porta, int maximoConexoes){
+
+int criaSocketServidor(int porta, int maximoConexoes) {
     int servidorSocket;
     struct sockaddr_in servidorEndereco;
 
-    // Cria o socket do servidor
     if ((servidorSocket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("Falha ao criar o socket");
+        perror("Falha ao criar socket");
         exit(EXIT_FAILURE);
     }
-   
+
     int opt = 1;
     if (setsockopt(servidorSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
-        perror("Falha ao configurar o socket para reutilizar o endereço");
+        perror("Falha ao configurar opções do socket");
         close(servidorSocket);
         exit(EXIT_FAILURE);
     }
 
-    // Configura o socket do servidor como não bloqueante
-    int flags = fcntl(servidorSocket, F_GETFL, 0);
-    fcntl(servidorSocket, F_SETFL, flags | O_NONBLOCK);
-
-    // Define o endereço do servidor
     servidorEndereco.sin_family = AF_INET;
     servidorEndereco.sin_addr.s_addr = INADDR_ANY;
     servidorEndereco.sin_port = htons(porta);
 
-    // Associa o socket ao endereço e porta
     if (bind(servidorSocket, (struct sockaddr *)&servidorEndereco, sizeof(servidorEndereco)) < 0) {
         perror("Falha ao associar o socket");
+        close(servidorSocket);
         exit(EXIT_FAILURE);
     }
 
-    // Coloca o socket em modo de escuta
     if (listen(servidorSocket, maximoConexoes) < 0) {
         perror("Falha ao colocar o socket em modo de escuta");
+        close(servidorSocket);
         exit(EXIT_FAILURE);
     }
 
-    printf("Servidor em execução na porta %d\n", porta);
     return servidorSocket;
 }
+
 
 int verificaErroSocket(int ver, const char *msg) {
     if (ver < 0) {

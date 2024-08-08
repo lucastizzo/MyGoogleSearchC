@@ -2,20 +2,40 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "compile",
+            "label": "compile-backend",
             "type": "shell",
             "command": "gcc",
             "args": [
                 "-I${workspaceFolder}/include",
-                "${fileDirname}/*.c",
+                "${workspaceFolder}/src/Servidor-C/*.c",
                 "-o",
-                "${fileDirname}/output/program",
+                "${workspaceFolder}/src/Servidor-C/output/program",
+                "-pthread",
                 "-ljson-c"
             ],
             "group": "build",
             "problemMatcher": [
                 "$gcc"
-            ]
+            ],
+            "detail": "Compile the backend server."
+        },
+        {
+            "label": "compile-loadbalancer",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-I${workspaceFolder}/include",
+                "${workspaceFolder}/src/loadbalancer/*.c",
+                "-o",
+                "${workspaceFolder}/src/loadbalancer/output/loadbalancer",
+                "-pthread",
+                "-ljson-c"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Compile the load balancer."
         },
         {
             "type": "cppbuild",
@@ -26,7 +46,9 @@
                 "-g",
                 "${file}",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/${fileBasenameNoExtension}",
+                "-pthread",
+                "-ljson-c"
             ],
             "options": {
                 "cwd": "${fileDirname}"

@@ -6,17 +6,9 @@
 #include <locale.h>
 #include <pthread.h>
 
-#define porta 8080
-#define tamanhoBuffer 4096
-#define maximoConexoes 10000000
-#define NUM_SERVERS 3 
-
-
-const char *servidoresBackend[NUM_SERVERS][2] = {
-    {"127.0.0.1", "8081"},
-    {"127.0.0.1", "8082"},
-    {"127.0.0.1", "8083"}
-};
+#define PORTA_BACKEND 8081 // Ajuste a porta conforme necessário
+#define TAMANHO_BUFFER 4096
+#define MAXIMO_CONEXOES 10000000
 
 int servidorAtual = 0;
 
@@ -28,22 +20,19 @@ void iniciaThreadConexao(int servidorSocket) {
     fd_set readfds;
     int max_sd, sd, activity;
 
-    while (1) {
-        // Limpa o conjunto de descritores de arquivo
-        FD_ZERO(&readfds);
+    printf("Iniciando thread de conexão do socket %d\n", servidorSocket);
 
-        // Adiciona o socket do servidor ao conjunto
+    while (1) {
+        FD_ZERO(&readfds);
         FD_SET(servidorSocket, &readfds);
         max_sd = servidorSocket;
 
-        // Espera por atividade em um dos sockets
         activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
 
         if ((activity < 0) && (errno != EINTR)) {
             printf("Erro no select");
         }
 
-        // Se algo aconteceu no socket do servidor, é uma nova conexão
         if (FD_ISSET(servidorSocket, &readfds)) {
             int client_socket = accept(servidorSocket, NULL, NULL);
 
@@ -52,6 +41,7 @@ void iniciaThreadConexao(int servidorSocket) {
                 continue;
             }
 
+            printf("Nova conexão aceita do load balancer...\n");
             int *pclient = malloc(sizeof(int));
             if (pclient == NULL) {
                 perror("Erro ao alocar memória para pclient");
@@ -66,18 +56,17 @@ void iniciaThreadConexao(int servidorSocket) {
                 perror("Erro ao criar thread");
                 free(pclient);
                 close(client_socket);
-            } else{
+            } else {
                 pthread_detach(thread_id);
             }
         }
     }
 }
 
-int main(){
-
-    int servidorSocket = criaSocketServidor(porta, maximoConexoes);
+int main() {
+    int servidorSocket = criaSocketServidor(PORTA_BACKEND, MAXIMO_CONEXOES);
+    printf("Backend em execução na porta %d\n", PORTA_BACKEND);
     iniciaThreadConexao(servidorSocket);
-    
     return 0;
-
 }
+

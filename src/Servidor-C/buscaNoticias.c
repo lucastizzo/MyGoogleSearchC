@@ -142,7 +142,7 @@ void resultadoPesquisa(char *requisicao, int sock, struct respostaServidor *resp
         
         if (j < numBotoes) {
             char botaoHTML[200];
-            sprintf(botaoHTML, "<a href='/resultadoPesquisa/%d/%s' class='btn'>Próximo</a> ", numBotoes, termoChave, numBotoes);
+            sprintf(botaoHTML, "<a href='/resultadoPesquisa/%d/%s' class='btn'>Próximo</a> ", numBotoes, termoChave);
             strcat(htmlResultado, botaoHTML);
         }
 

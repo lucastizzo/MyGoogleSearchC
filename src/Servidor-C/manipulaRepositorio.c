@@ -161,6 +161,7 @@ void mostraArquivoImportado(struct respostaServidor *resposta, int sock,char *no
 void listarArquivos(char *requisicao, int sock, struct respostaServidor *resposta){
     DIR *dp;
     struct dirent *ep;
+    int num_arquivos = 0;
 
     montaHTML(sock, resposta, "listarArquivos");
     printf("%s\n", repositorioNoticias);
@@ -170,11 +171,12 @@ void listarArquivos(char *requisicao, int sock, struct respostaServidor *respost
         
         strcat(resposta->conteudo, "<ul>\n");
         
-        while ((ep = readdir(dp)) != NULL) {
+        while ((ep = readdir(dp)) != NULL && num_arquivos < 150) {
             if (ep->d_type == DT_REG) {
                 char linha[1024]; 
                 snprintf(linha, sizeof(linha), "<li>%s - Descrição do arquivo %s <a href='/removerArquivo/%s'>Remover</a></li>\n", ep->d_name, ep->d_name, ep->d_name);
                 strcat(resposta->conteudo, linha);
+                num_arquivos++;
             }
         }
 
